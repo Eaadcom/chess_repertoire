@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class Movetree extends ConsumerWidget {
-  const Movetree({super.key, required this.currentChessTreeNode});
+  const Movetree(
+      {super.key,
+      required this.currentChessTreeNode,
+      required this.swapCurrentNode});
 
   final ChessTreeNode currentChessTreeNode;
+  final Function swapCurrentNode;
 
-   ChessTreeNode? _getPreviousNode(WidgetRef ref, String fen){
+  ChessTreeNode? _getPreviousNode(WidgetRef ref, String fen) {
     return ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(fen);
   }
-
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +25,10 @@ class Movetree extends ConsumerWidget {
         Column(
           children: [
             for (var entry in currentChessTreeNode.fromNodes.entries)
-             Text(_getPreviousNode(ref, entry.value.fen)!.playedMove)
+              ActionChip(
+                label: Text(_getPreviousNode(ref, entry.value.fen)!.playedMove),
+                onPressed: swapCurrentNode(),
+              )
           ],
         ),
         SizedBox(width: 16),
@@ -30,7 +36,7 @@ class Movetree extends ConsumerWidget {
         Column(
           children: [
             for (var entry in currentChessTreeNode.fromNodes.entries)
-             Text(entry.key)
+              Chip(label: Text(entry.key))
           ],
         ),
         SizedBox(width: 16),
@@ -38,7 +44,9 @@ class Movetree extends ConsumerWidget {
         Column(
           children: [
             for (var entry in currentChessTreeNode.toNodes.entries)
-             Text(entry.key)
+              Chip(
+                label: Text(entry.key),
+              )
           ],
         ),
       ],

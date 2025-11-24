@@ -16,7 +16,6 @@ class AppChessboard extends ConsumerStatefulWidget {
 class _AppChessboardState extends ConsumerState<AppChessboard> {
   var fen = kInitialBoardFEN;
   var oldFen = '';
-  var nextFen = '';
   Position position = Chess.initial;
   late var validMoves;
   late ChessTreeNode currentChessTreeNode;
@@ -66,21 +65,20 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
     return PlayerSide.black;
   }
 
-  // void _onFowardButton() {}
-
-  void _onBackwardButton() {
+  void _swapCurrentNode() {
     //set previous node as current node
-    setState(() {
-      currentChessTreeNode =
-          ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(oldFen)!;
-        
-      for (var item in currentChessTreeNode.fromNodes.entries){
-        position = item.value;
-        continue;
-      }
+    print('hello');
+    // setState(() {
+    //   currentChessTreeNode =
+    //       ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(oldFen)!;
 
-      fen = position.fen;
-    });
+    //   for (var item in currentChessTreeNode.fromNodes.entries) {
+    //     position = item.value;
+    //     continue;
+    //   }
+
+    //   fen = position.fen;
+    // });
   }
 
   @override
@@ -103,21 +101,22 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
             onPromotionSelection: (Role? role) {},
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: Icon(Icons.arrow_back_ios_new),
-              onPressed: _onBackwardButton,
-            ),
-            IconButton(
-              icon: Icon(Icons.arrow_forward_ios),
-              onPressed: () {},
-            ),
-          ],
-        ),
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.center,
+        //   children: [
+        //     IconButton(
+        //       icon: Icon(Icons.arrow_back_ios_new),
+        //       onPressed: _onBackwardButton,
+        //     ),
+        //     IconButton(
+        //       icon: Icon(Icons.arrow_forward_ios),
+        //       onPressed: () {},
+        //     ),
+        //   ],
+        // ),
         Movetree(
           currentChessTreeNode: currentChessTreeNode,
+          swapCurrentNode: _swapCurrentNode,
         ),
       ],
     );
