@@ -10,7 +10,7 @@ class Movetree extends ConsumerWidget {
       required this.swapCurrentNode});
 
   final ChessTreeNode currentChessTreeNode;
-  final Function swapCurrentNode;
+  final Function(String) swapCurrentNode;
 
   ChessTreeNode? _getPreviousNode(WidgetRef ref, String fen) {
     return ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(fen);
@@ -24,11 +24,15 @@ class Movetree extends ConsumerWidget {
         // Previous move
         Column(
           children: [
-            for (var entry in currentChessTreeNode.fromNodes.entries)
-              ActionChip(
-                label: Text(_getPreviousNode(ref, entry.value.fen)!.playedMove),
-                onPressed: swapCurrentNode(),
-              )
+            if (currentChessTreeNode.fromNodes.isNotEmpty)
+              for (var entry in currentChessTreeNode.fromNodes.entries)
+                ActionChip(
+                  label:
+                      Text(_getPreviousNode(ref, entry.value.fen)!.playedMove),
+                  onPressed: () {
+                    swapCurrentNode(entry.value.fen);
+                  },
+                )
           ],
         ),
         SizedBox(width: 16),
@@ -36,7 +40,7 @@ class Movetree extends ConsumerWidget {
         Column(
           children: [
             for (var entry in currentChessTreeNode.fromNodes.entries)
-              Chip(label: Text(entry.key))
+              ActionChip(label: Text(entry.key))
           ],
         ),
         SizedBox(width: 16),
@@ -44,8 +48,11 @@ class Movetree extends ConsumerWidget {
         Column(
           children: [
             for (var entry in currentChessTreeNode.toNodes.entries)
-              Chip(
+              ActionChip(
                 label: Text(entry.key),
+                onPressed: () {
+                  swapCurrentNode(entry.value.fen);
+                },
               )
           ],
         ),

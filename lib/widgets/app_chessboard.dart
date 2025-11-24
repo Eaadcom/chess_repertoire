@@ -14,7 +14,7 @@ class AppChessboard extends ConsumerStatefulWidget {
 }
 
 class _AppChessboardState extends ConsumerState<AppChessboard> {
-  var fen = kInitialBoardFEN;
+  var fen = Chess.initial.fen;
   var oldFen = '';
   Position position = Chess.initial;
   late var validMoves;
@@ -25,7 +25,7 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
     super.initState();
     currentChessTreeNode = ref
         .read(chessTreeNodeProvider.notifier)
-        .getNodeFromRegistry(kInitialBoardFEN)!;
+        .getNodeFromRegistry(Chess.initial.fen)!;
   }
 
   void _onMove(NormalMove move, {bool? isDrop}) {
@@ -43,7 +43,10 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
 
       // Save new position node in the registry & update update toNode in previous node
       ChessTreeNode newChessTreeNode = ChessTreeNode(
-          fen: fen, playedMove: move.uci, fromNodes: {move.uci: oldPosition});
+          fen: fen,
+          playedMove: move.uci,
+          fromNodes: {move.uci: oldPosition},
+          nodePosition: position);
       final chessTreeNotifier = ref.read(chessTreeNodeProvider.notifier);
       chessTreeNotifier.addNodeToRegsitry(fen, newChessTreeNode);
       Map<String, ChessTreeNode> nodeRegistry =
@@ -65,20 +68,15 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
     return PlayerSide.black;
   }
 
-  void _swapCurrentNode() {
-    //set previous node as current node
-    print('hello');
-    // setState(() {
-    //   currentChessTreeNode =
-    //       ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(oldFen)!;
-
-    //   for (var item in currentChessTreeNode.fromNodes.entries) {
-    //     position = item.value;
-    //     continue;
-    //   }
-
-    //   fen = position.fen;
-    // });
+  void _swapCurrentNode(String newNodeFen) {
+    ChessTreeNode newChessTreeNode = ref
+        .read(chessTreeNodeProvider.notifier)
+        .getNodeFromRegistry(newNodeFen)!;
+    setState(() {
+      fen = newChessTreeNode.fen;
+      position = newChessTreeNode.nodePosition;
+      currentChessTreeNode = newChessTreeNode;
+    });
   }
 
   @override
@@ -101,19 +99,6 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
             onPromotionSelection: (Role? role) {},
           ),
         ),
-        // Row(
-        //   mainAxisAlignment: MainAxisAlignment.center,
-        //   children: [
-        //     IconButton(
-        //       icon: Icon(Icons.arrow_back_ios_new),
-        //       onPressed: _onBackwardButton,
-        //     ),
-        //     IconButton(
-        //       icon: Icon(Icons.arrow_forward_ios),
-        //       onPressed: () {},
-        //     ),
-        //   ],
-        // ),
         Movetree(
           currentChessTreeNode: currentChessTreeNode,
           swapCurrentNode: _swapCurrentNode,

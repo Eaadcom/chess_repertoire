@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
   ChessTreeNodeNotifier()
       : super({
-          kInitialBoardFEN: ChessTreeNode(
-              fen: kInitialBoardFEN, playedMove: '', fromNodes: {})
+          Chess.initial.fen: ChessTreeNode(
+              fen: Chess.initial.fen, playedMove: '', fromNodes: {}, nodePosition: Chess.initial)
         });
 
   void addNodeToRegsitry(String fen, ChessTreeNode newChessTreeNode) {
