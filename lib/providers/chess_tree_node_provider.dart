@@ -39,22 +39,44 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
     return db;
   }
 
-  void loadNodesFromDatabase() async {
+  Future<ChessTreeNode> loadNodesFromDatabase() async {
     Database db = await createDatabase();
 
     final data = await db.query('repertoire_positions');
-    print('TESTESTEST');
-    print(data);
+
+    // Map<String, Position> toNodes = {};
+    for (var node in data) {
+      String newChessNodeFen = node['fen'] as String;
+      ChessTreeNode newChessTreeNode = ChessTreeNode(
+        fen: newChessNodeFen,
+        playedMove: node['playedMove'] as String,
+        savedToRepertoire: true,
+        fromNodes: {},
+        toNodes: {},
+        nodePosition: Position.setupPosition(
+          Rule.chess,
+          Setup.parseFen(
+            newChessNodeFen,
+          ),
+        ),
+      );
+      addNodeToRegsitry(newChessNodeFen, newChessTreeNode);
+    }
+
+    return state[Chess.initial.fen]!;
   }
 
   void saveNodesToDatabase() async {
     Database db = await createDatabase();
 
     for (var node in state.entries) {
-      db.insert('repertoire_positions', {
-        'fen': node.value.fen,
-        'playedMove': node.value.playedMove,
-      });
+      db.insert(
+          'repertoire_positions',
+          {
+            'fen': node.value.fen,
+            'playedMove': node.value.playedMove,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 

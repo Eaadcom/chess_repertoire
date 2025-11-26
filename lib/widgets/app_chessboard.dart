@@ -108,9 +108,13 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
               ref.read(chessTreeNodeProvider.notifier).saveNodesToDatabase();
             },
             child: Text('Save')),
-             TextButton(
+        TextButton(
             onPressed: () {
-              ref.read(chessTreeNodeProvider.notifier).loadNodesFromDatabase();
+              setState(() async {
+                currentChessTreeNode = await ref
+                    .read(chessTreeNodeProvider.notifier)
+                    .loadNodesFromDatabase();
+              });
             },
             child: Text('Load')),
       ],
