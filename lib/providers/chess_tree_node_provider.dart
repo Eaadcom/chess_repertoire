@@ -10,7 +10,7 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
       : super({
           Chess.initial.fen: ChessTreeNode(
               fen: Chess.initial.fen,
-              playedMove: '',
+              playedMove: 'Starting Position',
               fromNodes: {},
               nodePosition: Chess.initial)
         });
@@ -26,16 +26,15 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
     final dbPath = await sql.getDatabasesPath();
     final db = await sql.openDatabase(
       path.join(dbPath, 'repertoirePositions.db'),
-      onCreate: (db, version) {
+      onCreate: (db, version) async {
         return db.execute(
-          'CREATE TABLE repertoire_positions(fen TEXT PRIMARY KEY, playedMove TEXT)',
-          // Requirements: saving the FEN, saving the references to FENS, saving the moves
-        );
+            'CREATE TABLE IF NOT EXISTS repertoire_positions(fen TEXT PRIMARY KEY, playedMove TEXT)');
       },
       version: 1,
     );
+
     await db.execute(
-        'CREATE TABLE node_relationships(id INTEGER PRIMARY KEY AUTOINCREMENT, from_fen TEXT NOT NULL, to_fen TEXT NOT NULL, move TEXT NOT NULL, FOREIGN KEY (from_fen) REFERENCES repertoire_positions(fen), FOREIGN KEY (to_fen) REFERENCES repertoire_positions(fen))');
+        'CREATE TABLE IF NOT EXISTS node_relationships(id INTEGER PRIMARY KEY AUTOINCREMENT, from_fen TEXT NOT NULL, to_fen TEXT NOT NULL, move TEXT NOT NULL, FOREIGN KEY (from_fen) REFERENCES repertoire_positions(fen), FOREIGN KEY (to_fen) REFERENCES repertoire_positions(fen))');
 
     return db;
   }
