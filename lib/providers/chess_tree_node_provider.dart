@@ -12,6 +12,7 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
               fen: Chess.initial.fen,
               playedMove: 'Starting Position',
               fromNodes: {},
+              toNodes: {},
               nodePosition: Chess.initial)
         });
 
@@ -42,10 +43,12 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
   Future<ChessTreeNode> loadNodesFromDatabase() async {
     Database db = await createDatabase();
 
-    final data = await db.query('repertoire_positions');
+    final nodeData = await db.query('repertoire_positions');
+    // Tradeoff made here to query the whole relationships table at once to avoid the overhead of doing multiple queries
+    final relationsData = await db.query('node_relationships');
 
-    // Map<String, Position> toNodes = {};
-    for (var node in data) {
+    // Map repertoire_positions to node objects
+    for (var node in nodeData) {
       String newChessNodeFen = node['fen'] as String;
       ChessTreeNode newChessTreeNode = ChessTreeNode(
         fen: newChessNodeFen,
@@ -60,16 +63,49 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
           ),
         ),
       );
+
+      for (var relation in relationsData) {
+        // Map fromNode relationships
+        if (relation['to_fen'] as String == newChessNodeFen) {
+          newChessTreeNode.fromNodes[relation['move'] as String] =
+              Position.setupPosition(
+            Rule.chess,
+            Setup.parseFen(relation['from_fen'] as String),
+          );
+        }
+        // Map toNode relationships
+        if (relation['from_fen'] as String == newChessNodeFen) {
+          newChessTreeNode.toNodes[relation['move'] as String] =
+              Position.setupPosition(
+            Rule.chess,
+            Setup.parseFen(relation['to_fen'] as String),
+          );
+        }
+      }
+
       addNodeToRegsitry(newChessNodeFen, newChessTreeNode);
     }
 
     return state[Chess.initial.fen]!;
   }
 
+  void markLineToBeSavedRecursive(ChessTreeNode nodeToBeSaved) {
+    if (nodeToBeSaved.savedToRepertoire == true) {
+      return;
+    }
+    nodeToBeSaved.savedToRepertoire = true;
+    String nextNodeFen = nodeToBeSaved.fromNodes[nodeToBeSaved.playedMove]!.fen;
+    markLineToBeSavedRecursive(getNodeFromRegistry(nextNodeFen)!);
+  }
+
   void saveNodesToDatabase() async {
     Database db = await createDatabase();
 
     for (var node in state.entries) {
+      if (!node.value.savedToRepertoire) {
+        continue;
+      }
+      // INSERT into repertoire_positions table
       db.insert(
           'repertoire_positions',
           {
@@ -77,11 +113,49 @@ class ChessTreeNodeNotifier extends StateNotifier<Map<String, ChessTreeNode>> {
             'playedMove': node.value.playedMove,
           },
           conflictAlgorithm: ConflictAlgorithm.replace);
+
+      // INSERT fromNodes values into node_relationships table
+      for (var fromNode in node.value.fromNodes.entries) {
+        db.insert(
+          'node_relationships',
+          {
+            'from_fen': fromNode.value.fen,
+            'to_fen': node.value.fen,
+            'move': fromNode.key,
+          },
+        );
+      }
+
+      // INSERT toNodes values into node_relationships table
+      for (var toNode in node.value.toNodes.entries) {
+        if (isSavedInRegistry(toNode.key)) {
+          db.insert(
+            'node_relationships',
+            {
+              'from_fen': node.value.fen,
+              'to_fen': toNode.value.fen,
+              'move': toNode.key,
+            },
+          );
+        }
+      }
     }
   }
 
   Map<String, ChessTreeNode> getNodeRegistry() {
     return state;
+  }
+
+  bool isSavedInRegistry(String fen) {
+    final node = getNodeFromRegistry(fen);
+
+    if (node == null) {
+      return false;
+    }
+    if (node.savedToRepertoire) {
+      return true;
+    }
+    return false;
   }
 
   ChessTreeNode? getNodeFromRegistry(String fen) {

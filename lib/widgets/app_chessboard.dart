@@ -18,14 +18,20 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
   var oldFen = '';
   Position position = Chess.initial;
   late var validMoves;
-  late ChessTreeNode currentChessTreeNode;
+  ChessTreeNode? currentChessTreeNode;
 
   @override
   void initState() {
     super.initState();
-    currentChessTreeNode = ref
-        .read(chessTreeNodeProvider.notifier)
-        .getNodeFromRegistry(Chess.initial.fen)!;
+    _loadNodesFromDatabase();
+  }
+
+  void _loadNodesFromDatabase() async {
+    ChessTreeNode newChessTreeNode =
+        await ref.read(chessTreeNodeProvider.notifier).loadNodesFromDatabase();
+    setState(() {
+      currentChessTreeNode = newChessTreeNode;
+    });
   }
 
   void _onMove(NormalMove move, {bool? isDrop}) {
@@ -41,18 +47,24 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
         },
       );
 
-      // Save new position node in the registry & update update toNode in previous node
-      ChessTreeNode newChessTreeNode = ChessTreeNode(
-          fen: fen,
-          playedMove: move.uci,
-          fromNodes: {move.uci: oldPosition},
-          nodePosition: position);
-      final chessTreeNotifier = ref.read(chessTreeNodeProvider.notifier);
-      chessTreeNotifier.addNodeToRegsitry(fen, newChessTreeNode);
-      Map<String, ChessTreeNode> nodeRegistry =
-          chessTreeNotifier.getNodeRegistry();
-      if (nodeRegistry[oldFen] != null) {
-        nodeRegistry[oldFen]!.toNodes[move.uci] = position;
+      ChessTreeNode? newChessTreeNode =
+          ref.read(chessTreeNodeProvider.notifier).getNodeFromRegistry(fen);
+      // If node does not exist yet
+      if (newChessTreeNode == null) {
+        // Save new position node in the registry & update update toNode in previous node
+        newChessTreeNode = ChessTreeNode(
+            fen: fen,
+            playedMove: move.uci,
+            fromNodes: {move.uci: oldPosition},
+            toNodes: {},
+            nodePosition: position);
+        final chessTreeNotifier = ref.read(chessTreeNodeProvider.notifier);
+        chessTreeNotifier.addNodeToRegsitry(fen, newChessTreeNode);
+        Map<String, ChessTreeNode> nodeRegistry =
+            chessTreeNotifier.getNodeRegistry();
+        if (nodeRegistry[oldFen] != null) {
+          nodeRegistry[oldFen]!.toNodes[move.uci] = position;
+        }
       }
 
       setState(() {
@@ -103,20 +115,6 @@ class _AppChessboardState extends ConsumerState<AppChessboard> {
           currentChessTreeNode: currentChessTreeNode,
           swapCurrentNode: _swapCurrentNode,
         ),
-        TextButton(
-            onPressed: () {
-              ref.read(chessTreeNodeProvider.notifier).saveNodesToDatabase();
-            },
-            child: Text('Save')),
-        TextButton(
-            onPressed: () {
-              setState(() async {
-                currentChessTreeNode = await ref
-                    .read(chessTreeNodeProvider.notifier)
-                    .loadNodesFromDatabase();
-              });
-            },
-            child: Text('Load')),
       ],
     );
   }

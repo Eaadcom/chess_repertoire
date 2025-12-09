@@ -9,7 +9,7 @@ class Movetree extends ConsumerWidget {
       required this.currentChessTreeNode,
       required this.swapCurrentNode});
 
-  final ChessTreeNode currentChessTreeNode;
+  final ChessTreeNode? currentChessTreeNode;
   final Function(String) swapCurrentNode;
 
   ChessTreeNode? _getPreviousNode(WidgetRef ref, String fen) {
@@ -18,45 +18,95 @@ class Movetree extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Previous move
-        Column(
-          children: [
-            if (currentChessTreeNode.fromNodes.isNotEmpty)
-              for (var entry in currentChessTreeNode.fromNodes.entries)
-                ActionChip(
-                  label:
-                      Text(_getPreviousNode(ref, entry.value.fen)!.playedMove),
-                  onPressed: () {
-                    swapCurrentNode(entry.value.fen);
-                  },
-                )
-          ],
-        ),
-        SizedBox(width: 16),
-        // Last move
-        Column(
-          children: [
-            for (var entry in currentChessTreeNode.fromNodes.entries)
-              ActionChip(label: Text(entry.key))
-          ],
-        ),
-        SizedBox(width: 16),
-        // Next move
-        Column(
-          children: [
-            for (var entry in currentChessTreeNode.toNodes.entries)
-              ActionChip(
-                label: Text(entry.key),
-                onPressed: () {
-                  swapCurrentNode(entry.value.fen);
-                },
-              )
-          ],
-        ),
-      ],
-    );
+    Widget content = Center(child: CircularProgressIndicator());
+    ref.watch(chessTreeNodeProvider);
+
+    if (currentChessTreeNode != null) {
+      content = Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Previous move
+              Column(
+                children: [
+                  if (currentChessTreeNode!.fromNodes.isNotEmpty)
+                    for (var entry in currentChessTreeNode!.fromNodes.entries)
+                      ActionChip(
+                        label: Text(
+                          _getPreviousNode(ref, entry.value.fen)!.playedMove,
+                          style: TextStyle(
+                            color: ref
+                                    .read(chessTreeNodeProvider.notifier)
+                                    .isSavedInRegistry(entry.value.fen)
+                                ? Colors.green
+                                : Colors.amber,
+                          ),
+                        ),
+                        onPressed: () {
+                          swapCurrentNode(entry.value.fen);
+                        },
+                      )
+                ],
+              ),
+              SizedBox(width: 16),
+              // Last move
+              Column(
+                children: [
+                  for (var entry in currentChessTreeNode!.fromNodes.entries)
+                  // TODO BUG HERE
+                    ActionChip(
+                      label: Text(
+                        entry.key,
+                        style: TextStyle(
+                          color: currentChessTreeNode!.savedToRepertoire
+                              ? Colors.green
+                              : Colors.amber,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(width: 16),
+              // Next move
+              Column(
+                children: [
+                  for (var entry in currentChessTreeNode!.toNodes.entries)
+                    ActionChip(
+                      label: Text(
+                        entry.key,
+                        style: TextStyle(
+                          color: ref
+                                  .read(chessTreeNodeProvider.notifier)
+                                  .isSavedInRegistry(entry.value.fen)
+                              ? Colors.green
+                              : Colors.amber,
+                        ),
+                      ),
+                      onPressed: () {
+                        swapCurrentNode(entry.value.fen);
+                      },
+                    )
+                ],
+              ),
+            ],
+          ),
+          ElevatedButton(
+              onPressed: currentChessTreeNode!.savedToRepertoire
+                  ? null
+                  : () {
+                      ref
+                          .read(chessTreeNodeProvider.notifier)
+                          .markLineToBeSavedRecursive(currentChessTreeNode!);
+                      ref
+                          .read(chessTreeNodeProvider.notifier)
+                          .saveNodesToDatabase();
+                      swapCurrentNode(currentChessTreeNode!.fen);
+                    },
+              child: Text('Save this line')),
+        ],
+      );
+    }
+    return content;
   }
 }
